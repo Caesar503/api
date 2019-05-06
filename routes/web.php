@@ -14,3 +14,9 @@
 Route::get('/', function () {
     return view('welcome');
 });
+//get
+Route::get('/api/userinfo','UserApiController@userinfo');
+//post-》application/x-www-form-urlencoded    &&&&&&&&&&& form-data
+Route::post('/test/user','UserApiController@user_post');
+//post-》raw
+Route::post('/test/user_raw','UserApiController@user_post_r');
