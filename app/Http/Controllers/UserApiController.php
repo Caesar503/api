@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
+use App\Model\User;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
 class UserApiController extends Controller
 {
     //get 传值
@@ -75,5 +77,111 @@ class UserApiController extends Controller
         dump(json_decode(base64_decode($res),true));
         //关闭curl资源并且释放系统资源
         curl_close($ch);
+    }
+
+    //注册
+    public function reg(Request $request)
+    {
+//        dump($request->all());
+        $name = $request->name;
+        $pass1 = $request->pass1;
+        $pass2 = $request->pass2;
+        $email = $request->email;
+        $age = $request->age;
+        //判断密码
+        if($pass1!=$pass2){
+            $respon = [
+                'error'=>5001,
+                "msg"=>"密码必须一致"
+            ];
+            die(json_encode($respon,JSON_UNESCAPED_UNICODE));
+        }
+        //判断邮箱存在不存在
+        $res = User::where('email',$email)->first();
+        if($res){
+            $respon = [
+                'error'=>5002,
+                "msg"=>"邮箱已经存在"
+            ];
+            die(json_encode($respon,JSON_UNESCAPED_UNICODE));
+        }
+        //添加入库
+        $pass = password_hash($pass1,PASSWORD_BCRYPT);
+//        $2y$10$7PJgtasFy9p6.tsOtH6BBuvLSMamYFF.AsJ4P5XJNwKKYOP3XHXY6
+        $data = [
+            'username'=>$name,
+            'pass'=>$pass,
+            'email'=>$email,
+            'age'=>$age
+        ];
+        $n = User::insertGetId($data);
+        if($n){
+            $respon = [
+                'error'=>0,
+                "msg"=>"注册成功"
+            ];
+            die(json_encode($respon,JSON_UNESCAPED_UNICODE));
+        }else{
+            $respon = [
+                'error'=>5003,
+                "msg"=>"注册存在"
+            ];
+            die(json_encode($respon,JSON_UNESCAPED_UNICODE));
+        }
+    }
+    //登录
+    public function login(Request $request)
+    {
+//       dd($request->all());
+        $email = $request->email;
+        $pass = $request->pass;
+        //查询邮箱在不在
+        $res = User::where('email',$email)->first();
+        if($res){                         //该用户存在
+            //TODO
+//            echo $res['pass'];die;
+            if(!password_verify($pass,$res->pass)){
+                $respon=[
+                    'error'=>5004,
+                    'msg'=>"密码错误"
+                ];
+                die(json_encode($respon,JSON_UNESCAPED_UNICODE));
+            }else{
+                //生成用户token
+                $token = $this->getUserToken($res->id);
+                //存储redis
+                $key="uid:".$res->id;
+                Redis::set($key,$token);
+                Redis::expire($key,7*3600*24);
+                $respon=[
+                    'error'=>0,
+                    'msg'=>"登陆成功",
+                    'token'=>$token,
+                ];
+                die(json_encode($respon,JSON_UNESCAPED_UNICODE));
+            }
+        }else{                          //该用户不存在
+            //TODO
+                $respon=[
+                    'error'=>5004,
+                    'msg'=>"该用户不存在"
+                ];
+                die(json_encode($respon,JSON_UNESCAPED_UNICODE));
+        }
+    }
+    //生成用户token
+    function getUserToken($id){
+        return substr($id.time().Str::random(10),0,15);
+    }
+
+    //生成器
+    public function aaa()
+    {
+        return view('aaa.aaa');
+    }
+    //闭包
+    public function bbb()
+    {
+        return view('aaa.bbb');
     }
 }
