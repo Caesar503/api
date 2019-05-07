@@ -32,3 +32,6 @@ Route::post('/test/login','UserApiController@login');
 Route::get('/test/aaa','UserApiController@aaa');
 //创建闭包
 Route::get('/test/bbb','UserApiController@bbb');
+
+//创建资源控制器
+Route::resource('/goods',GoodsController::class);
